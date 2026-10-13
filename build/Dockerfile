@@ -116,7 +116,7 @@ RUN \
     # Note: tini is a helper for reaping zombie processes.
     apt-get update -qq &&\
     apt-get upgrade -yqq &&\
-    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends curl gnupg tini python3 python3-distutils-extra &&\
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends curl gnupg tini python3 &&\
     # Cleanup.
     # Note: the Debian image does automatically a clean after each install thanks to a hook.
     # Therefore, there is no need for apt-get clean.
@@ -212,13 +212,20 @@ RUN \
     apt-get update -qq &&\
     apt-get upgrade -yqq &&\
     DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends -t trixie-backports libreoffice &&\
-    curl -Ls https://raw.githubusercontent.com/gotenberg/unoconverter/v0.1.1/unoconv -o /usr/bin/unoconverter &&\
+    # Note: LibreOffice from backports is not pinned (backports only keeps the latest version),
+    # so unoconverter must stay compatible with it. v0.2.0+ is required for LibreOffice 26.2+.
+    curl -Ls https://raw.githubusercontent.com/gotenberg/unoconverter/v0.5.0/unoconv -o /usr/bin/unoconverter &&\
     chmod +x /usr/bin/unoconverter &&\
     # unoconverter will look for the Python binary, which has to be at version 3.
     ln -s /usr/bin/python3 /usr/bin/python &&\
     # Verify installations.
     libreoffice --version &&\
     unoconverter --version &&\
+    # Smoke test: fail the build if unoconverter cannot convert with the installed LibreOffice.
+    mkdir -p /tmp/unoconverter-smoke &&\
+    printf 'smoke test' > /tmp/unoconverter-smoke/test.txt &&\
+    HOME=/tmp/unoconverter-smoke unoconverter --format pdf --output /tmp/unoconverter-smoke/test.pdf /tmp/unoconverter-smoke/test.txt &&\
+    test -s /tmp/unoconverter-smoke/test.pdf &&\
     # Cleanup.
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
